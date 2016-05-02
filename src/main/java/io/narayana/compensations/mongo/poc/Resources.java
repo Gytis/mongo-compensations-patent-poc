@@ -11,9 +11,9 @@ import javax.enterprise.inject.Produces;
  */
 public class Resources {
 
-    public static final String IP = "192.168.99.100";
+    public static final String MONGO_IP = "192.168.99.100";
 
-    public static final int PORT = 27017;
+    public static final int MONGO_PORT = 27017;
 
     public static final String DATABASE = "poc";
 
@@ -21,7 +21,7 @@ public class Resources {
 
     @Produces
     public MongoCollection<Document> getMongoCollection() {
-        return new MongoClient(IP, PORT).getDatabase(DATABASE).getCollection(COLLECTION);
+        return new MongoClient(MONGO_IP, MONGO_PORT).getDatabase(DATABASE).getCollection(COLLECTION);
     }
 
 }

@@ -4,6 +4,7 @@ import com.mongodb.MongoClient;
 import org.bson.Document;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.narayana.compensations.impl.BAControllerFactory;
 import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.asset.EmptyAsset;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
@@ -19,6 +20,7 @@ import java.time.LocalTime;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 /**
  * @author <a href="mailto:gytis@redhat.com">Gytis Trikleris</a>
@@ -40,21 +42,30 @@ public class ClientTest {
 
     @Before
     public void resetAccountData() throws Exception {
-        new MongoClient(Resources.IP, Resources.PORT).getDatabase(Resources.DATABASE).drop();
+        new MongoClient(Resources.MONGO_IP, Resources.MONGO_PORT).getDatabase(Resources.DATABASE).drop();
     }
 
     @Test
-    public void dummyTest() throws Exception {
+    public void testClose() throws Exception {
+        BAControllerFactory.getInstance().beginBusinessActivity();
         Document original = new Document("timestamp", LocalTime.now().toString());
+        client.insertDocuments(original);
+        BAControllerFactory.getInstance().closeBusinessActivity();
 
-        client.insertSerialisedHandler(original);
-        Document fromDatabase = client.getSerialisedHandler(original);
-
+        Document fromDatabase = client.getDocument(original);
         assertEquals(original.getString("timestamp"), fromDatabase.getString("timestamp"));
-        assertNotNull(fromDatabase.getString("txdata"));
+        assertNull(fromDatabase.getString("txdata"));
+        assertNotNull(fromDatabase.getString("id"));
+    }
 
-        DummyCompensationHandler handler = DummyCompensationHandler.valueOf(fromDatabase.getString("txdata"));
-        handler.compensate();
+    @Test
+    public void testCancel() throws Exception {
+        BAControllerFactory.getInstance().beginBusinessActivity();
+        Document original = new Document("timestamp", LocalTime.now().toString());
+        client.insertDocuments(original);
+        BAControllerFactory.getInstance().cancelBusinessActivity();
+
+        assertNull(client.getDocument(original));
     }
 
 }
